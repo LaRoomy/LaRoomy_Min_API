@@ -2,7 +2,7 @@
 
 ## Description
 
-All examples are written for the example schematic published in this repository. A Microchip atmega328p is used in conjunction with a microchip RN4871 Bluetooth Module. The RN4871 is preconfigured with the parameters given on the root page of this repository. All examples are using the sleep function and when the RN4871 module is preconfigured for auto-sleep the examples have an average power consumption of ~150µA.
+All examples are written for the example schematic published in this repository. A Microchip atmega328p is used in conjunction with a microchip RN4871 Bluetooth Module. The RN4871 is preconfigured with the parameters given on the root page of this repository. All examples are using the power-down sleep mode of the atmega328 and when the RN4871 module is preconfigured for auto-sleep the examples have an average power consumption of ~150µA.
 
 ![](res/common_bluetooth_control_board.jpg)
 
