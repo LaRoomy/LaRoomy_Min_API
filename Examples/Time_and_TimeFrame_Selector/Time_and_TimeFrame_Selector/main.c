@@ -1,7 +1,9 @@
 /*
  * Demonstration project for the minimalized version of the LaRoomy Api
  *
- * All properties with simple property state are added to the api to demonstrate its usage
+ * The current time is saved in a time-keeper ic (mcp 79410) and the Time- and TimeFrame- Selectors are used to control leds.
+ * The TIME_SELECTOR_LED is disabled if the current time matches the selected time
+ * The TIME_FRAME_SELECTOR_LED is enable if the current time is in the selected time frame
  *
  */
 #define F_CPU 9830400UL
@@ -25,20 +27,16 @@
 
 // indication LED
 #define CONNECTION_STATE_LED_PIN PORTC0
-#define BUTTON_TEST_LED_PIN PORTC1
-#define SWITCH_TEST_LED_PIN PORTC2
-#define LEVEL_SELECTOR_LED_PIN PORTB1
+#define TIME_SELECTOR_LED PORTC1
+#define TIME_FRAME_SELECTOR_LED PORTC2
 
 // hardware buttons
 #define HBUTTON_PIN PORTB2
 
 //	Property ID's
-#define PROPERTY_ID_BUTTON 1          // button
-#define PROPERTY_ID_SWITCH 2          // switch
-#define PROPERTY_ID_LEVEL_SELECTOR 3  // level selector
-#define PROPERTY_ID_LEVEL_INDICATOR 4 // level indicator
-#define PROPERTY_ID_TEXT_DISPLAY 5    // text display
-#define PROPERTY_ID_OPTION_SELECTOR 6 // option selector
+#define PROPERTY_ID_BUTTON 1             // button
+#define PROPERTY_ID_TIME_SELECTOR 2      // time selector
+#define PROPERTY_ID_TIMEFRAME_SELECTOR 3 // time frame selector
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -47,6 +45,7 @@
 #include "a328_rn487x_com.h"
 #include "atmega328_interrupt.h"
 #include "atmega328_timer.h"
+#include "mcp79410.h"
 
 #include "LaRoomyApi.h"
 
@@ -59,17 +58,22 @@ uint8_t get_RN487X_Status();
 // get the connection state
 uint8_t getConnectionState();
 
+void InitTimeKeeper();
+
 // create the data-holder for the properties
 DEVICE_PROPERTY dpButton;
-DEVICE_PROPERTY dpSwitch;
-DEVICE_PROPERTY dpLevelSelector;
-DEVICE_PROPERTY dpLevelIndicator;
-DEVICE_PROPERTY dpTextDisplay;
-DEVICE_PROPERTY dpOptionSelector;
+DEVICE_PROPERTY dpTimeSelector;
+DEVICE_PROPERTY dpTimeFrameSelector;
+
+// create the data-holder for the complex property states
+TIME_SELECTOR_STATE timeSelectorState;
+TIME_FRAME_STATE timeFrameState;
 
 uint8_t noSleep;
 uint8_t sleepRequested;
 uint8_t preSleepCounter;
+uint8_t one_second_event;
+uint8_t timeRequestResposeControl;
 
 ISR(TIMER0_OVF_vect)
 {
@@ -82,6 +86,11 @@ ISR(TIMER0_OVF_vect)
     }
 }
 
+ISR(INT0_vect)
+{
+    one_second_event = 1;
+}
+
 ISR(PCINT2_vect)
 {
     // wake up
@@ -92,7 +101,7 @@ int main(void)
     _delay_ms(800);
 
     // set data directions
-    DDRB = 0b00000010; // pb1 as pwm output for level selector & pb2 as input from a hardware button
+    DDRB = 0b00000000; // pb2 as input from a hardware button
     DDRC = 0b00001111; // pc0, pc1, pc2 and pc3 as output for control led
     DDRD = 0b00100000; // rx ind pin output pd5
 
@@ -104,10 +113,15 @@ int main(void)
     // initialize usart communication controller
     comInit();
 
+    // initialize the mcp79410 timekeeper ic
+    InitTimeKeeper();
+
     // init parameter
     noSleep = 0;
     sleepRequested = 0;
     preSleepCounter = 0;
+    timeRequestResposeControl = 0;
+    one_second_event = 0;
 
     // set the usart output gateway for the laroomy api
     // - the internal transmission control will use this function to send data
@@ -123,11 +137,8 @@ int main(void)
 
     // init the property structs
     initDevicePropertyStruct(&dpButton);
-    initDevicePropertyStruct(&dpSwitch);
-    initDevicePropertyStruct(&dpLevelSelector);
-    initDevicePropertyStruct(&dpLevelIndicator);
-    initDevicePropertyStruct(&dpTextDisplay);
-    initDevicePropertyStruct(&dpOptionSelector);
+    initDevicePropertyStruct(&dpTimeSelector);
+    initDevicePropertyStruct(&dpTimeFrameSelector);
 
     // define the property data:
 
@@ -135,65 +146,46 @@ int main(void)
     dpButton.ID = PROPERTY_ID_BUTTON;
     dpButton.type = PTYPE_BUTTON;
     dpButton.imageID = LIGHT_BULB_004;
-    setPropertyDescriptor(&dpButton, "Press the;;Button"); // dual descriptor: element-text and button-text
+    setPropertyDescriptor(&dpButton, "Time Selector LED;;Toggle"); // dual descriptor: element-text and button-text
 
     // add the button
     addDeviceProperty(&dpButton);
 
-    // switch definition
-    dpSwitch.ID = PROPERTY_ID_SWITCH;
-    dpSwitch.type = PTYPE_SWITCH;
-    dpSwitch.imageID = LIGHT_SETUP_005;
-    setPropertyDescriptor(&dpSwitch, "Example Switch");
+    // time selector definition
+    dpTimeSelector.ID = PROPERTY_ID_TIME_SELECTOR;
+    dpTimeSelector.type = PTYPE_TIME_SELECTOR;
+    dpTimeSelector.imageID = TIME_012;
+    setPropertyDescriptor(&dpTimeSelector, "Select disable time");
 
-    // add the switch
-    addDeviceProperty(&dpSwitch);
+    // add the time selector
+    addDeviceProperty(&dpTimeSelector);
 
-    // level selector definition
-    dpLevelSelector.ID = PROPERTY_ID_LEVEL_SELECTOR;
-    dpLevelSelector.type = PTYPE_LEVEL_SELECTOR;
-    dpLevelSelector.imageID = LEVEL_ADJUST_043;
-    setPropertyDescriptor(&dpLevelSelector, "Select a Level");
+    // add the state for the time selector (+set default values)
+    timeSelectorState.hour = 20;
+    timeSelectorState.minute = 0;
+    addTimeSelectorStateForProperty(PROPERTY_ID_TIME_SELECTOR, &timeSelectorState);
 
-    // add the level selector
-    addDeviceProperty(&dpLevelSelector);
+    // time frame selector definition
+    dpTimeFrameSelector.ID = PROPERTY_ID_TIMEFRAME_SELECTOR;
+    dpTimeFrameSelector.type = PTYPE_TIME_FRAME_SELECTOR;
+    dpTimeFrameSelector.imageID = TIME_SETUP_014;
+    setPropertyDescriptor(&dpTimeFrameSelector, "Select a time frame");
 
-    // level indicator definition
-    dpLevelIndicator.ID = PROPERTY_ID_LEVEL_INDICATOR;
-    dpLevelIndicator.type = PTYPE_LEVEL_INDICATOR;
-    dpLevelIndicator.imageID = BATTERY_75P_033;
-    dpLevelIndicator.state = 192;
-    setPropertyDescriptor(&dpLevelIndicator, "Level Indication");
+    // add the time frame selector
+    addDeviceProperty(&dpTimeFrameSelector);
 
-    // add the level indicator
-    addDeviceProperty(&dpLevelIndicator);
-
-    // text display definition
-    dpTextDisplay.ID = PROPERTY_ID_TEXT_DISPLAY;
-    dpTextDisplay.type = PTYPE_TEXT_DISPLAY;
-    dpTextDisplay.imageID = NOTIFICATION_067;
-    setPropertyDescriptor(&dpTextDisplay, "Status: Ready");
-
-    // add the text display
-    addDeviceProperty(&dpTextDisplay);
-
-    // option selector definition
-    dpOptionSelector.ID = PROPERTY_ID_OPTION_SELECTOR;
-    dpOptionSelector.type = PTYPE_OPTION_SELECTOR;
-    dpOptionSelector.imageID = OPTION_LIST_170;
-    setPropertyDescriptor(&dpOptionSelector, "Select an Option;;Option 1;;Option 2;;Option 3");
-
-    // add the option selector
-    addDeviceProperty(&dpOptionSelector);
+    // add the state for the time frame selector (+set default values)
+    timeFrameState.start_hour = 20;
+    timeFrameState.start_minute = 0;
+    timeFrameState.end_hour = 22;
+    timeFrameState.end_minute = 0;
+    addTimeFrameSelectorStateForProperty(PROPERTY_ID_TIMEFRAME_SELECTOR, &timeFrameState);
 
     // activate pin change interrupt to wake up when the rn487x gets connected
     enablePinChangeInterruptOnStatusPin();
 
     // activate timer
     activateTimer0();
-
-    // config pwm timer setup
-    InitPWMTimer1();
 
     while (1)
     {
@@ -220,6 +212,17 @@ int main(void)
             // timer event:
             if (timerEvent)
             {
+                // check if the time request was received, if not, send the request again
+                if (timeRequestResposeControl == 1)
+                {
+                    sendTimeRequest();
+                    timeRequestResposeControl = 2;
+                }
+                else if (timeRequestResposeControl == 2)
+                {
+                    timeRequestResposeControl = 1;
+                }
+
                 // the pre-sleep counter implements a delay before the controller goes into sleep
                 // (sometimes there is a short delay in the change of the status pins of the rn487x - this could be misinterpreted)
                 if (preSleepCounter != 0)
@@ -232,6 +235,41 @@ int main(void)
                     }
                 }
                 timerEvent = 0;
+            }
+
+            if (one_second_event)
+            {
+                // check time and control the leds respectively
+
+                // get system time
+                uint16_t time = GetSystemTime();
+                uint8_t currentHour = LOBYTE(time);
+                uint8_t currentMinute = HIBYTE(time);
+
+                // check time selector time
+                PTIME_SELECTOR_STATE pTimeSelectorState = getTimeSelectorState(PROPERTY_ID_TIME_SELECTOR);
+                if (pTimeSelectorState != NULL)
+                {
+                    // if the time equals the current time, disable the led
+                    if (pTimeSelectorState->hour == currentHour && pTimeSelectorState->minute == currentMinute)
+                    {
+                        PORTC &= ~(1 << TIME_SELECTOR_LED);
+                    }
+                }
+
+                // check time frame
+                PTIME_FRAME_STATE pTimeFrameState = getTimeFrameSelectorState(PROPERTY_ID_TIMEFRAME_SELECTOR);
+                if (pTimeFrameState != NULL)
+                {
+                    if (isTimeInFrame(pTimeFrameState, currentHour, currentMinute))
+                    {
+                        PORTC |= (1 << TIME_FRAME_SELECTOR_LED);
+                    }
+                    else
+                    {
+                        PORTC &= ~(1 << TIME_FRAME_SELECTOR_LED);
+                    }
+                }
             }
 
             // check the connection state and set the connection state led accordingly plus control the pre-sleep counter parameter
@@ -277,76 +315,35 @@ void propertyCallback(uint8_t propertyID, uint8_t eventID)
         if (propertyID == PROPERTY_ID_BUTTON)
         {
             // toggle led
-            PORTC ^= (1 << BUTTON_TEST_LED_PIN);
+            PORTC ^= (1 << TIME_SELECTOR_LED);
         }
         break;
-    case REVT_SWITCH_STATE_CHANGED:
-        // make sure to address the correct property
-        if (propertyID == PROPERTY_ID_SWITCH)
-        {
-            // set the led with respect to the new state
-            uint8_t newState = getSimplePropertyState(propertyID);
-            if (newState == OFF)
-            {
-                PORTC &= ~(1 << SWITCH_TEST_LED_PIN);
-            }
-            else
-            {
-                PORTC |= (1 << SWITCH_TEST_LED_PIN);
-            }
-        }
+    case REVT_PROPERTY_LOADING_FROM_DEVICE_COMPLETE:
+        // when properties are loaded, send a time request to save the current time
+        // to the time keeper
+        sendTimeRequest();
+        timeRequestResposeControl = 1;
         break;
-    case REVT_LEVEL_SELECTOR_VALUE_CHANGED:
-        // make sure to address the correct property
-        if (propertyID == PROPERTY_ID_LEVEL_SELECTOR)
-        {
-            // get the new value
-            uint8_t newValue = getSimplePropertyState(propertyID);
-
-            // set the led with respect to the new value
-            if (newValue == 0)
-            {
-                SetPWMValue(PWM_CHANNEL_A, 0);
-                StopPWM(PWM_CHANNEL_A);
-            }
-            else
-            {
-                StartPWM(PWM_CHANNEL_A);
-                SetPWMValue(PWM_CHANNEL_A, newValue);
-            }
-        }
+    case REVT_PROPERTY_LOADING_FROM_CACHE_COMPLETE:
+        // when properties are loaded, send a time request to save the current time
+        // to the time keeper
+        sendTimeRequest();
+        timeRequestResposeControl = 1;
         break;
-    case REVT_OPTION_SELECTOR_INDEX_CHANGED:
-        // make sure to address the correct property
-        if (propertyID == PROPERTY_ID_OPTION_SELECTOR)
-        {
-            // get the new value
-            uint8_t newValue = getSimplePropertyState(propertyID);
+    case REVT_TIME_REQUEST_RESPONSE:
+    {
+        uint8_t hours;
+        uint8_t minutes;
+        uint8_t seconds;
 
-            // update the text display to show the current option in the app
-            char statusText[] = "Option X is selected";
+        // fetch time data
+        fetchTimeResponseData(&hours, &minutes, &seconds);
+        timeRequestResposeControl = 3;
 
-            if (newValue == 0)
-            {
-                statusText[7] = '1';
-            }
-            else if (newValue == 1)
-            {
-                statusText[7] = '2';
-            }
-            else
-            {
-                statusText[7] = '3';
-            }
-
-            PDEVICE_PROPERTY textDisplay = getDevicePropertyFromID(PROPERTY_ID_TEXT_DISPLAY);
-            if (textDisplay != NULL)
-            {
-                setPropertyDescriptor(textDisplay, statusText);
-                updateDeviceProperty(textDisplay);
-            }
-        }
-        break;
+        // setup rtc
+        Timekeeper_SetTime(hours, minutes, seconds);
+    }
+    break;
     default:
         break;
     }
@@ -388,4 +385,25 @@ uint8_t getConnectionState()
     {
         return DISCONNECTED;
     }
+}
+
+void InitTimeKeeper()
+{
+    // if the power was lost and no backup battery was connected, the oscillator must be restarted
+    if (Timekeeper_CheckFullPowerLoss())
+    {
+        // enable oscillator
+        SetTimeKeeperRTCCRegister(TCREG_SECONDS, ST_OSCILLATOR_ENABLE);
+        // enable backup battery
+        Timekeeper_EnableBackupBattery();
+        // enable 1Hz square wave on INT0 pin
+        SetTimekeeperControlRegister(0x40);
+    }
+    // check if the primary power was lost and erase the fail flag
+    if (Timekeeper_CheckPrimaryPowerLoss())
+    {
+        Timekeeper_ErasePowerFailFlag();
+    }
+    // setup the interrupt on INT0 to enable a wakeup condition every second to check the current time
+    setupINT0_Interrupt();
 }
