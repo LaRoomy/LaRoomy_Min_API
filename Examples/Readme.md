@@ -4,6 +4,8 @@
 
 All examples are written for the example schematic published in this repository. A microchip Atmega328P is used in conjunction with a microchip RN4871 Bluetooth Module. The RN4871 in preconfigured with the parameters given on the root page of this repository.
 
+![](res/common_bluetooth_control_board.jpg)
+
 ## Examples
 
 ### All Simple Properties
