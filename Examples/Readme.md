@@ -4,7 +4,15 @@
 
 All examples are written for the example board published in this repository. The projects are created with the Microchip Studio IDE.
 
-A Microchip atmega328p is used in conjunction with a microchip RN4871 Bluetooth Module. The RN4871 is preconfigured with the parameters given on the [root page](https://github.com/LaRoomy/LaRoomy_Min_API) of this repository. All examples are using the power-down sleep mode of the atmega328 and when the RN4871 module is preconfigured for auto-sleep the examples have an average power consumption of ~150µA.
+A Microchip Atmega328p is used in conjunction with a Microchip RN4871 Bluetooth Module. The RN4871 is preconfigured with the following setup:
+- Bluetooth Name - Command SN,&lt;name&gt;
+- Baudrate set to 57600 - Command SB,04
+- Pre and Post delimiter of status messages are set to '@' - Command S%,@,@
+- Pin 1_2 of the Module is configured as STATUS1 - Command SW,0A,07
+- Pin 1_3 of the Module is configured as STATUS2 - Command SW,0B,08
+- Low Power Operation is activated - Command SO,1
+
+All examples are using the power-down sleep mode of the atmega328 and when the RN4871 module is preconfigured for auto-sleep the examples have an average power consumption of ~150µA.
 
 ![](res/common_bluetooth_control_board.jpg)
 
