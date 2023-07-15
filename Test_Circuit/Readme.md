@@ -6,8 +6,6 @@ This schematic/board is used in all examples in this repository.
 
 If the shutdown mode of the RN4871 is used, the 1Hz square wave interrupt of the Microchip MCP79410 is used to generate a sucessive wakeup condition so that the bluetooth module is only used a short period of a time interval to advertise and may receive a connection and the input voltage regulator is not used (for example by powering through a micro cell battery), the current consumption can be reduced to an average value of 5µA.
 
-![](img/common_ble_board.JPEG)
-
 ## Board
 ![](img/atmega328_rn4871_ble_board.png)
 
@@ -19,3 +17,6 @@ Logic Section:
 3.3V Power Generation:
 
 ![](img/schematic_3v3_generation.png)
+
+Final assembled board
+![](img/common_ble_board.JPEG)
