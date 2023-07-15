@@ -7,7 +7,9 @@ To get an introduction, a description of the concept behind and further info to 
 
 ## Implementation
 Please Note:
-> This is a short outline of the implementation terminology. [To get detailed info click here and visit the respective page on the LaRoomy Api Website.](https://api.laroomy.com/)
+> This is a short outline of the implementation terminology.
+>
+>  [To get detailed info click here and visit the respective page on the LaRoomy Api Website.](https://api.laroomy.com/)
 
 **To implement the LaRoomy functionality in your project the following steps are necessary:**
 
