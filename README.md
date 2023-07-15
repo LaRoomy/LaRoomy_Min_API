@@ -3,9 +3,11 @@
 ## Description
 This is a minimized Version of the LaRoomy Api written in C and is optimized for 8 bit microcontroller. It's not platform specific: It can be used in conjunction with all controllers which have an externally bluetooth hardware or bluetooth capabilities included.
 
-To get an introduction and further info to the LaRoomy API vistit the [website](https://api.laroomy.com/p/get-started.html#genInfoHd)
+To get an introduction, a description of the concept behind and further info to the LaRoomy API vistit the [website](https://api.laroomy.com/p/get-started.html#genInfoHd)
 
 ## Implementation
+Please Note:
+- This is a short outline of the implementation terminology. [To get detailed info visit the respective page in the LaRoomy Api Website.](https://api.laroomy.com/)
 To implement the LaRoomy functionality in your project the following steps are necessary:
 
 ### Definitions
