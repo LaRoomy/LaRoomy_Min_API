@@ -18,5 +18,5 @@ Logic Section:
 
 ![](img/schematic_3v3_generation.png)
 
-Final assembled board
+## Final assembly
 ![](img/common_ble_board.JPEG)
