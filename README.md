@@ -58,3 +58,5 @@ void onDataReceived(const char *data);
 
 ## Examples
 Included in this repository are [examples](https://github.com/LaRoomy/LaRoomy_Min_API/tree/main/Examples) created with the Microchip Studio IDE. They use a combination of an Atmega328P and a Microchip RN4871 Bluetooth Module.
+
+The underlying schematic and board data is created with the Eagle Layout Editor and included in this repository. [Show it](https://github.com/LaRoomy/LaRoomy_Min_API/tree/main/Test_Circuit)
