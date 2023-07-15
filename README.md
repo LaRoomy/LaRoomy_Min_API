@@ -28,6 +28,8 @@ To implement the LaRoomy functionality in your project the following steps are n
 ### Loop
 - Check for incoming data periodically and forward it to the api if there was data to process
 
+### *Important:*
+
 Since the minimized LaRoomy Api is a generalized implementation of the transmission handling to interact with the LaRoomy App, the api does not automatically receive or send data.
 To implement the API in the existing logic, the data to sent and the data which is received must be bypassed to the api by registering a gateway function for each direction, respectively.
 
@@ -47,7 +49,7 @@ void sendBLEData(const char* data)
 // - the internal transmission control will use this function to send data
 setOutGateway(sendBLEData);
 ```
-If data is received through the bluetooth line, it must be bypassed to the 'onDataReceived' function of the LaRoomy Api to process it:
+If data is received through the bluetooth line, it must be passed to the 'onDataReceived' function of the LaRoomy Api to process it:
 ``` C
 // when data is received from the gateway, this function must be called to process the data
 // - this is critical for the api to work correctly
