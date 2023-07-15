@@ -43,7 +43,7 @@ void sendBLEData(const char* data)
 {
     if(data != NULL)
     {
-      USART_WriteString(data);
+        USART_WriteString(data);
     }
 }
 
