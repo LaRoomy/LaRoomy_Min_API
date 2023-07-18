@@ -1,5 +1,5 @@
 # LaRoomy_Min_API
-
+![](https://img.shields.io/github/license/LaRoomy/LaRoomy_Min_API?color=009999&style=for-the-badge)
 ## Description
 This is a minimized Version of the LaRoomy Api written in C and is optimized for 8 bit microcontroller. It's not platform specific: It can be used in conjunction with all controllers which have an externally bluetooth hardware or bluetooth capabilities included.
 
