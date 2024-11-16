@@ -6,10 +6,10 @@ This is a minimized Version of the LaRoomy Api written in C and is optimized for
 To get an introduction, a description of the concept behind and further info to the LaRoomy API vistit the [website](https://api.laroomy.com/p/get-started.html#genInfoHd)
 
 ## Implementation
-Please Note:
+> [!NOTE]
 > This is a short outline of the implementation terminology.
->
->  [To get detailed info click here and visit the respective page on the LaRoomy Api Website.](https://api.laroomy.com/2023/07/minimized-api-version-for-8bit-systems.html)
+> 
+>  To get detailed info [click here](https://api.laroomy.com/2023/07/minimized-api-version-for-8bit-systems.html) to visit the respective page on the LaRoomy Api Website.
 
 **To implement the LaRoomy functionality in your project the following steps are necessary:**
 
